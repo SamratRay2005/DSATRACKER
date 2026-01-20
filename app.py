@@ -2,7 +2,7 @@ import os
 import random
 import requests
 from functools import wraps
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, abort, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_mail import Mail, Message
@@ -48,6 +48,13 @@ login_manager.init_app(app)
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+@app.context_processor
+def inject_user_xp():
+    if current_user.is_authenticated:
+        solved_count = UserProgress.query.filter_by(user_id=current_user.id, is_solved=True).count()
+        return dict(user_xp=solved_count * 100)
+    return dict(user_xp=0)
 
 def admin_required(f):
     @wraps(f)
@@ -209,25 +216,25 @@ def update_leetcode_username():
              flash('Please enter a username.', 'warning')
     return redirect(url_for('profile'))
 
-@app.route('/sync_leetcode', methods=['POST'])
-@login_required
-def sync_leetcode():
-    username = current_user.leetcode_username
-    if not username:
-        flash('Please set your LeetCode username first.', 'warning')
-        return redirect(url_for('profile'))
+def sync_user_from_leetcode(user):
+    """
+    Syncs a single user's LeetCode submissions.
+    Returns a dict with 'marked_count', 'error' (if any).
+    """
+    if not user.leetcode_username:
+        return {'status': 'ignored', 'reason': 'No username'}
 
-    # GraphQL Query
     query = """
     query recentAcSubmissions($username: String!, $limit: Int!) {
       recentAcSubmissionList(username: $username, limit: $limit) {
         titleSlug
+        timestamp
       }
     }
     """
     
     variables = {
-        "username": username,
+        "username": user.leetcode_username,
         "limit": 100 
     }
 
@@ -240,17 +247,29 @@ def sync_leetcode():
         data = resp.json()
         
         if 'errors' in data:
-             flash(f'LeetCode API Error: {data["errors"][0]["message"]}', 'error')
-             return redirect(url_for('profile'))
+             return {'status': 'error', 'message': data["errors"][0]["message"]}
 
         submissions = data.get('data', {}).get('recentAcSubmissionList', [])
+        
+        # 1. Update last submission timestamp
+        if submissions:
+            # timestamps are usually strings in seconds
+            timestamps = [int(sub['timestamp']) for sub in submissions if 'timestamp' in sub]
+            if timestamps:
+                max_ts = max(timestamps)
+                # Convert to datetime
+                last_sub_dt = datetime.fromtimestamp(max_ts)
+                
+                # Update user if this is newer
+                if not user.last_submission_timestamp or last_sub_dt > user.last_submission_timestamp:
+                    user.last_submission_timestamp = last_sub_dt
+                    db.session.commit()
+
         solved_slugs = {sub['titleSlug'] for sub in submissions}
 
         if not solved_slugs:
-            flash('No recent submissions found or user not found.', 'info')
-            return redirect(url_for('profile'))
+            return {'status': 'success', 'marked_count': 0}
 
-        # Check against Question DB
         all_qs = Question.query.all()
         marked_count = 0
         
@@ -264,9 +283,9 @@ def sync_leetcode():
             
             if q_slug in solved_slugs:
                 # Mark as solved
-                prog = UserProgress.query.filter_by(user_id=current_user.id, question_id=q.id).first()
+                prog = UserProgress.query.filter_by(user_id=user.id, question_id=q.id).first()
                 if not prog:
-                    prog = UserProgress(user_id=current_user.id, question_id=q.id, is_solved=True)
+                    prog = UserProgress(user_id=user.id, question_id=q.id, is_solved=True)
                     db.session.add(prog)
                     marked_count += 1
                 elif not prog.is_solved:
@@ -277,18 +296,69 @@ def sync_leetcode():
             db.session.commit()
             # Update streak if we have that function available
             try:
-                update_streak(current_user)
+                update_streak(user)
+                db.session.commit()
             except:
                 pass 
+        
+        # Update Last Sync Time
+        user.last_leetcode_sync = datetime.now()
+        db.session.commit()
+
+        return {'status': 'success', 'marked_count': marked_count}
+
+    except Exception as e:
+        print(f"Sync Error: {e}")
+        return {'status': 'error', 'message': str(e)}
+
+@app.route('/sync_leetcode', methods=['POST'])
+@login_required
+def sync_leetcode():
+    result = sync_user_from_leetcode(current_user)
+    
+    if result['status'] == 'error':
+        flash(f'LeetCode API Error: {result.get("message")}', 'error')
+    elif result['status'] == 'ignored':
+        flash('Please set your LeetCode username first.', 'warning')
+    else:
+        marked_count = result.get('marked_count', 0)
+        if marked_count > 0:
             flash(f'Synced! Marked {marked_count} problems as solved.', 'success')
         else:
             flash('Synced! No new problems found in your recent history.', 'info')
 
-    except Exception as e:
-        print(f"Sync Error: {e}")
-        flash('Failed to connect to LeetCode.', 'error')
-
     return redirect(url_for('profile'))
+
+@app.route('/api/cron/sync_all')
+def cron_sync_all():
+    users = User.query.filter(User.leetcode_username != None).all()
+    results = {}
+    for user in users:
+        res = sync_user_from_leetcode(user)
+        results[user.username] = res
+    return jsonify(results)
+
+@app.route('/api/sync/background', methods=['POST'])
+@login_required
+def background_sync():
+    """
+    Called by client-side JS every ~60s to keep data fresh while user is online.
+    Rate limited to 1 sync per minute per user.
+    """
+    try:
+        # Check cooldown (60 seconds)
+        if current_user.last_leetcode_sync:
+            # ensure offset-aware/naive compatibility
+            last_sync = current_user.last_leetcode_sync
+            if (datetime.now() - last_sync) < timedelta(seconds=60):
+                return jsonify({'status': 'skipped', 'reason': 'cooldown'})
+        
+        # Perform sync
+        result = sync_user_from_leetcode(current_user)
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # --- Helper Functions ---
 
@@ -325,7 +395,7 @@ def dashboard():
     
     # Calculate XP (100 XP per solved problem)
     solved_count = sum(1 for p in progress_records if p.is_solved)
-    user_xp = solved_count * 100
+    # user_xp = solved_count * 100  <-- Handled by context_processor now
     
     # Organize by week for the accordion view
     weeks_data = {}
@@ -357,7 +427,6 @@ def dashboard():
     return render_template('dashboard.html', 
                          weeks=weeks_data, 
                          weeks_stats=weeks_stats,
-                         user_xp=user_xp,
                          username=current_user.username)
 
 @app.route('/revision')

@@ -123,5 +123,26 @@
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+    {% if current_user.is_authenticated %}
+    <script>
+        // Auto-Sync LeetCode every 60 seconds when online
+        setInterval(() => {
+            fetch('/api/sync/background', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success' && data.marked_count > 0) {
+                    console.log(`[AutoSync] Synced ${data.marked_count} new problems.`);
+                }
+            })
+            .catch(err => console.error('[AutoSync] Error:', err));
+        }, 60000); 
+    </script>
+    {% endif %}
 </body>
 </html>

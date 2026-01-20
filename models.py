@@ -17,6 +17,8 @@ class User(UserMixin, db.Model):
     
     # Streak & Activity Tracking
     last_active_date = db.Column(db.Date, nullable=True)
+    last_submission_timestamp = db.Column(db.DateTime, nullable=True)
+    last_leetcode_sync = db.Column(db.DateTime, nullable=True)
     streak_count = db.Column(db.Integer, default=0)
     
     # Relationship to track progress
