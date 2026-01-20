@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col lg:flex-row gap-8">
+    
+    <!-- Sidebar / Control Panel -->
+    <aside class="w-full lg:w-1/4 space-y-6">
+        
+        <!-- Random Picker Module -->
+        <div class="bg-gray-800/50 border border-neon-blue/30 rounded-lg p-6 backdrop-blur-sm relative overflow-hidden group hover:border-neon-blue transition-colors duration-300">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-neon-blue to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+            
+            <h3 class="text-neon-blue font-mono font-bold text-lg mb-4 flex items-center gap-2">
+                <span class="animate-pulse">⚡</span> RANDOM_ACCESS
+            </h3>
+            
+            <div class="space-y-3">
+                <button onclick="pickRandom('any')" class="w-full bg-slate-900 border border-slate-600 hover:border-gray-400 text-gray-300 hover:text-white font-mono py-3 px-4 rounded transition-all duration-200 text-sm flex justify-between items-center group">
+                    <span>> EXECUTE_ANY</span>
+                    <span class="opacity-0 group-hover:opacity-100 text-neon-blue">_</span>
+                </button>
+                <button onclick="pickRandom('unsolved')" class="w-full bg-indigo-900/40 border border-indigo-500/50 hover:bg-indigo-900/60 hover:border-neon-purple text-indigo-200 font-mono py-3 px-4 rounded transition-all duration-200 text-sm flex justify-between items-center shadow-[0_0_10px_rgba(188,19,254,0.1)] hover:shadow-[0_0_15px_rgba(188,19,254,0.3)]">
+                    <span>> EXECUTE_UNSOLVED</span>
+                    <span class="text-neon-purple">!</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Weekly Progress Stats -->
+        <div class="bg-gray-800/50 border border-white/10 rounded-lg p-6 font-mono text-sm">
+            <h3 class="text-gray-400 mb-4 font-bold border-b border-white/10 pb-2">SYSTEM_INTEGRITY</h3>
+            <div class="space-y-4">
+                {% for w_num, w_stat in weeks_stats.items() %}
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-gray-400">WEEK_{{ '%02d'|format(w_num) }}</span>
+                        <span id="integrity-text-{{ w_num }}" class="{{ 'text-neon-green' if w_stat.percent == 100 else 'text-neon-blue' }}">{{ w_stat.percent }}%</span>
+                    </div>
+                    <div class="h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                        <div id="integrity-bar-{{ w_num }}" class="h-full {{ 'bg-neon-green shadow-neon-green' if w_stat.percent == 100 else 'bg-neon-blue shadow-neon-blue' }}" style="width: {{ w_stat.percent }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </aside>
+
+    <main class="w-full lg:w-3/4">
+        
+        <!-- Random Result View (Holographic Modal) -->
+        <div id="random-view" class="hidden relative min-h-[400px] flex flex-col justify-center items-center p-8 border border-neon-blue rounded-xl bg-slate-900/90 backdrop-blur-md shadow-[0_0_50px_rgba(0,243,255,0.15)] z-20">
+            <!-- Scanlines overlay -->
+            <div class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_4px,3px_100%] pointer-events-none z-0 rounded-xl"></div>
+            
+            <div class="relative z-10 text-center w-full max-w-2xl">
+                <div class="inline-block border border-neon-blue/30 px-3 py-1 rounded text-neon-blue font-mono text-xs mb-6 animate-pulse">
+                    INCOMING_TRANSMISSION...
+                </div>
+                
+                <h1 id="fs-problem-name" class="text-3xl md:text-5xl font-bold text-white mb-6 font-mono tracking-tight leading-tight">
+                    Problem_Name
+                </h1>
+                
+                <div class="flex justify-center gap-3 mb-8">
+                    <span id="fs-topic" class="bg-indigo-900/50 text-indigo-300 border border-indigo-500/30 px-4 py-1.5 rounded text-sm font-mono tracking-wider">TOPIC</span>
+                    <span id="fs-difficulty" class="bg-gray-800 text-gray-300 border border-gray-600 px-4 py-1.5 rounded text-sm font-mono">DIFF</span>
+                </div>
+
+                <!-- Controls -->
+                <div class="flex justify-center gap-4 mb-8">
+                    <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 border border-gray-600 hover:border-neon-green text-gray-300 hover:text-white px-6 py-3 rounded transition flex items-center gap-3 group">
+                        <input type="checkbox" id="fs-solved" class="w-5 h-5 accent-neon-green bg-gray-900 border-gray-600 rounded">
+                        <span class="font-mono text-sm group-hover:text-neon-green">MARK_COMPLETE</span>
+                    </label>
+
+                    <button id="fs-bookmark" class="bg-slate-800 hover:bg-slate-700 border border-gray-600 hover:border-yellow-500 text-yellow-500/50 hover:text-yellow-400 px-6 py-3 rounded transition flex items-center gap-2">
+                        <span id="fs-star" class="text-xl">★</span>
+                    </button>
+                </div>
+
+                <div class="flex flex-col items-center gap-4">
+                    <a id="fs-link" href="#" target="_blank" class="bg-neon-blue text-slate-900 font-bold font-mono py-3 px-10 rounded shadow-neon-blue hover:shadow-[0_0_30px_rgba(0,243,255,0.6)] hover:bg-white transition-all transform hover:-translate-y-1">
+                        INITIALIZE_LINK_ >
+                    </a>
+                    
+                    <button onclick="closeRandomView()" class="text-gray-500 hover:text-gray-300 font-mono text-xs hover:underline mt-4">
+                        [ ABORT_SEQUENCE ]
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule View -->
+        <div id="schedule-view">
+            <div class="flex justify-between items-end mb-8 border-b border-gray-800 pb-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-white mb-1 tracking-tight">MISSION_CONTROL</h1>
+                    <p class="text-gray-500 font-mono text-sm">> Select a module to begin coding sequence</p>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+            {% for week_num, problems in weeks.items() %}
+                <div class="group border border-gray-700 bg-gray-800/30 rounded-lg overflow-hidden transition-all duration-300 hover:border-gray-500">
+                    
+                    <!-- Accordion Header -->
+                    <button class="w-full text-left p-5 flex justify-between items-center group-hover:bg-gray-800/50 transition-colors" onclick="toggleWeek('week-{{ week_num }}')">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded bg-slate-900 border border-gray-700 flex items-center justify-center font-mono font-bold text-gray-400 group-hover:text-neon-blue group-hover:border-neon-blue transition-colors">
+                                {{ '%02d'|format(week_num) }}
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-200 group-hover:text-white transition">WEEK_MODULE_{{ week_num }}</h3>
+                                <div class="h-1 w-24 bg-gray-700 mt-2 rounded-full overflow-hidden">
+                                    <div id="progress-bar-{{ week_num }}" class="h-full bg-neon-purple transition-all duration-500" style="width: {{ weeks_stats[week_num].percent }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span id="progress-text-{{ week_num }}" class="block font-mono text-neon-blue text-lg">{{ weeks_stats[week_num].completed }}/{{ weeks_stats[week_num].total }}</span>
+                            <span class="text-xs text-gray-500 font-mono uppercase">Completed</span>
+                        </div>
+                    </button>
+                    
+                    <!-- Accordion Body (Terminal Table) -->
+                    <div id="week-{{ week_num }}" class="accordion-content border-t border-gray-800/50 bg-black/40">
+                        <div class="p-0 overflow-x-auto">
+                            <table class="w-full text-left font-mono text-sm">
+                                <thead>
+                                    <tr class="text-gray-500 bg-black/20 border-b border-gray-800">
+                                        <th class="p-4 w-16 text-center">STS</th>
+                                        <th class="p-4">PROBLEM_ID</th>
+                                        <th class="p-4 text-xs tracking-wider">TOPIC</th>
+                                        <th class="p-4 text-xs tracking-wider">DIFFICULTY</th>
+                                        <th class="p-4 w-20 text-center">SAVE</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-800/50">
+                                    {% for item in problems %}
+                                    <tr class="hover:bg-white/5 transition-colors group/row">
+                                        <td class="p-4 text-center">
+                                            <input type="checkbox" 
+                                                   class="w-4 h-4 rounded border-gray-600 bg-gray-900 accent-neon-green cursor-pointer" 
+                                                   onchange="toggleStatus({{ item.q.id }}, 'solved', this, {{ week_num }})"
+                                                   {% if item.solved %}checked{% endif %}>
+                                        </td>
+                                        
+                                        <td class="p-4">
+                                            <a href="{{ item.q.problem_link }}" target="_blank" class="text-indigo-300 hover:text-neon-blue hover:shadow-[0_0_10px_rgba(0,243,255,0.4)] transition-all">
+                                                {{ item.q.problem_name }}
+                                            </a>
+                                        </td>
+                                        
+                                        <td class="p-4">
+                                            <span class="text-xs text-gray-400 font-mono">{{ item.q.topic }}</span>
+                                        </td>
+                                        
+                                        <td class="p-4">
+                                            <span class="text-xs px-2 py-1 rounded bg-opacity-20 border
+                                                {% if 'Easy' in item.q.difficulty %} bg-green-500 text-green-400 border-green-500/30
+                                                {% elif 'Medium' in item.q.difficulty %} bg-yellow-500 text-yellow-400 border-yellow-500/30
+                                                {% else %} bg-red-500 text-red-400 border-red-500/30 {% endif %}">
+                                                {{ item.q.difficulty }}
+                                            </span>
+                                        </td>
+                                        
+                                        <td class="p-4 text-center">
+                                            <button onclick="toggleStatus({{ item.q.id }}, 'bookmarked', this)" class="group focus:outline-none transition-all duration-300 transform hover:scale-125 p-2 rounded-full hover:bg-white/5 {% if item.bookmarked %}text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.6)]{% else %}text-gray-400 hover:text-yellow-300{% endif %}">
+                                                <span class="text-3xl bookmark-icon-{{ item.q.id }} block">
+                                                    {% if item.bookmarked %}★{% else %}☆{% endif %}
+                                                </span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+function toggleWeek(id) {
+    const el = document.getElementById(id);
+    el.classList.toggle('active');
+}
+</script>
+{% endblock %}

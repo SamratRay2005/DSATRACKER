@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="min-h-[80vh] flex flex-col md:flex-row shadow-[0_0_50px_rgba(0,0,0,0.5)] rounded-2xl overflow-hidden border border-gray-800">
+    
+    <!-- Left Panel: Graphic / Hero -->
+    <div class="md:w-1/2 bg-slate-900 relative overflow-hidden flex flex-col justify-center items-center p-12 text-center group">
+        <!-- Animated Background Grid -->
+        <div class="absolute inset-0 bg-[linear-gradient(rgba(10,255,104,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(10,255,104,0.05)_1px,transparent_1px)] bg-[size:40px_40px] [transform-origin:center] [perspective:500px] [transform:rotateX(60deg)_translateY(-100px)_scale(1.5)] opacity-50"></div>
+        
+        <div class="relative z-10">
+            <div class="text-8xl mb-6 animate-pulse text-neon-green">⚡</div>
+            <h1 class="text-4xl md:text-5xl font-bold font-mono text-white mb-4 tracking-tighter">
+                New<span class="text-neon-green"> User</span>
+            </h1>
+            <p class="text-gray-400 font-mono text-lg max-w-sm mx-auto">
+                Join the platform<br>
+                Start your journey
+            </p>
+        </div>
+        
+        <!-- Decoration Circles -->
+        <div class="absolute -bottom-20 -left-20 w-64 h-64 bg-neon-green rounded-full blur-[100px] opacity-20"></div>
+        <div class="absolute -top-20 -right-20 w-64 h-64 bg-neon-blue rounded-full blur-[100px] opacity-20"></div>
+    </div>
+
+    <!-- Right Panel: Register Form -->
+    <div class="md:w-1/2 bg-gray-900 p-8 md:p-12 flex flex-col justify-center relative border-l border-gray-800">
+        
+        <div class="max-w-xs mx-auto w-full">
+            <h2 class="text-3xl font-bold text-white mb-2 font-mono">Sign Up</h2>
+            <p class="text-gray-500 text-sm font-mono mb-8">Create your account</p>
+            
+            <form method="POST" action="/register" class="space-y-4">
+                <div>
+                    <label class="block text-neon-blue text-xs font-bold font-mono mb-2 uppercase tracking-wider">Username</label>
+                    <input type="text" name="username" class="w-full bg-slate-800/50 border border-gray-700 text-white p-3 pl-4 rounded focus:outline-none focus:border-neon-blue focus:shadow-neon-blue transition font-mono" placeholder="Username" required>
+                </div>
+
+                <div>
+                    <label class="block text-neon-green text-xs font-bold font-mono mb-2 uppercase tracking-wider">Email Address</label>
+                    <input type="email" name="email" class="w-full bg-slate-800/50 border border-gray-700 text-white p-3 pl-4 rounded focus:outline-none focus:border-neon-green focus:shadow-neon-green transition font-mono" placeholder="email@example.com" required>
+                </div>
+                
+                <div>
+                    <label class="block text-amber-500 text-xs font-bold font-mono mb-2 uppercase tracking-wider">LeetCode Username (Optional)</label>
+                    <input type="text" name="leetcode_username" class="w-full bg-slate-800/50 border border-gray-700 text-white p-3 pl-4 rounded focus:outline-none focus:border-amber-500 focus:shadow-amber-500 transition font-mono" placeholder="leetcode_user">
+                </div>
+
+                <div>
+                    <label class="block text-neon-purple text-xs font-bold font-mono mb-2 uppercase tracking-wider">Password</label>
+                    <input type="password" name="password" class="w-full bg-slate-800/50 border border-gray-700 text-white p-3 pl-4 rounded focus:outline-none focus:border-neon-purple focus:shadow-neon-purple transition font-mono" placeholder="••••••••" required>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-neon-green text-slate-900 font-bold font-mono py-3 px-4 rounded hover:bg-white hover:text-black shadow-[0_0_20px_rgba(10,255,104,0.3)] hover:shadow-neon-green transition-all transform hover:-translate-y-1">
+                        Sign Up
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-8 text-center border-t border-gray-800 pt-6">
+                <p class="text-gray-500 text-sm font-mono">
+                    Already have an account? <a href="/login" class="text-neon-blue hover:underline hover:text-white transition">Login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

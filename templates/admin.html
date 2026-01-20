@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="flex justify-between items-center mb-8 pb-4 border-b border-gray-800">
+        <h1 class="text-3xl font-bold font-mono text-white tracking-tight">
+            > SYSTEM_ADMIN_PANEL
+        </h1>
+        <a href="/dashboard" class="text-neon-blue hover:text-white font-mono text-xs border border-neon-blue/30 px-3 py-1 rounded hover:bg-neon-blue hover:border-neon-blue hover:text-black transition-all">
+            < RETURN_TO_ROOT
+        </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-gray-900 p-6 rounded-lg border border-neon-blue/30 relative overflow-hidden group">
+            <div class="absolute inset-0 bg-neon-blue/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <h3 class="text-neon-blue font-mono text-sm uppercase mb-2">Total Users</h3>
+            <p class="text-4xl font-bold text-white font-mono">{{ stats.user_count }}</p>
+        </div>
+        <div class="bg-gray-900 p-6 rounded-lg border border-neon-green/30 relative overflow-hidden group">
+            <div class="absolute inset-0 bg-neon-green/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <h3 class="text-neon-green font-mono text-sm uppercase mb-2">Total Questions</h3>
+            <p class="text-4xl font-bold text-white font-mono">{{ stats.question_count }}</p>
+        </div>
+         <div class="bg-gray-900 p-6 rounded-lg border border-neon-purple/30 relative overflow-hidden group">
+            <div class="absolute inset-0 bg-neon-purple/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <h3 class="text-neon-purple font-mono text-sm uppercase mb-2">Database Records</h3>
+            <p class="text-4xl font-bold text-white font-mono">{{ stats.progress_count }}</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- Add Question Form -->
+        <div class="bg-gray-900 p-6 rounded-lg border border-gray-700 shadow-xl">
+            <h2 class="text-xl font-bold mb-6 text-white font-mono border-b border-gray-800 pb-2 flex items-center gap-2">
+                <span class="text-neon-green">+</span> INJECT_NEW_DATA
+            </h2>
+            <form action="{{ url_for('admin_add_question') }}" method="POST" class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-500 text-xs font-mono mb-2 uppercase">Problem Name</label>
+                        <input type="text" name="problem_name" required class="w-full bg-slate-800 border border-gray-700 text-white rounded p-2 text-sm focus:border-neon-green focus:outline-none transition-colors font-mono" placeholder="NAME_STRING">
+                    </div>
+                    <div>
+                        <label class="block text-gray-500 text-xs font-mono mb-2 uppercase">Topic</label>
+                        <input type="text" name="topic" required class="w-full bg-slate-800 border border-gray-700 text-white rounded p-2 text-sm focus:border-neon-green focus:outline-none transition-colors font-mono" placeholder="CATEGORY">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-500 text-xs font-mono mb-2 uppercase">Difficulty</label>
+                        <select name="difficulty" class="w-full bg-slate-800 border border-gray-700 text-white rounded p-2 text-sm focus:border-neon-green focus:outline-none transition-colors font-mono">
+                            <option value="Easy">Easy</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Hard">Hard</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-500 text-xs font-mono mb-2 uppercase">Week Number</label>
+                        <input type="number" name="week" required min="1" max="52" class="w-full bg-slate-800 border border-gray-700 text-white rounded p-2 text-sm focus:border-neon-green focus:outline-none transition-colors font-mono" placeholder="MODULE_ID">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-gray-500 text-xs font-mono mb-2 uppercase">Problem Link</label>
+                    <input type="url" name="problem_link" required class="w-full bg-slate-800 border border-gray-700 text-white rounded p-2 text-sm focus:border-neon-green focus:outline-none transition-colors font-mono" placeholder="HTTPS://...">
+                </div>
+
+                <div>
+                    <label class="block text-gray-500 text-xs font-mono mb-2 uppercase">Editorial Link (Optional)</label>
+                    <input type="url" name="editorial_link" class="w-full bg-slate-800 border border-gray-700 text-white rounded p-2 text-sm focus:border-neon-green focus:outline-none transition-colors font-mono" placeholder="HTTPS://...">
+                </div>
+
+                <button type="submit" class="w-full bg-neon-green/10 border border-neon-green text-neon-green font-bold font-mono py-2 px-4 rounded hover:bg-neon-green hover:text-black transition-all mt-4 uppercase text-sm tracking-wider">
+                    > EXECUTE_INSERT
+                </button>
+            </form>
+        </div>
+
+        <!-- User Management -->
+        <div class="bg-gray-900 p-6 rounded-lg border border-gray-700 shadow-xl">
+            <h2 class="text-xl font-bold mb-6 text-white font-mono border-b border-gray-800 pb-2 flex items-center gap-2">
+                <span class="text-neon-purple">👥</span> USER_DATABASE
+            </h2>
+            
+            <div class="overflow-y-auto max-h-[500px] pr-2 custom-scrollbar">
+                <table class="w-full text-left font-mono text-sm">
+                    <thead class="bg-slate-800 text-gray-400 sticky top-0 uppercase text-xs">
+                        <tr>
+                            <th class="p-3">ID</th>
+                            <th class="p-3">Username</th>
+                            <th class="p-3">Role</th>
+                            <th class="p-3 text-center">Ops</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-800">
+                        {% for user in users %}
+                        <tr class="group hover:bg-white/5 transition-colors">
+                            <td class="p-3 text-gray-500">{{ user.id }}</td>
+                            <td class="p-3 text-indigo-300 group-hover:text-white transition-colors">{{ user.username }}</td>
+                            <td class="p-3">
+                                {% if user.is_admin %}
+                                <span class="bg-red-500/10 text-red-400 border border-red-500/30 text-[10px] px-2 py-1 rounded">ADMIN</span>
+                                {% else %}
+                                <span class="text-gray-600 text-[10px]">USER</span>
+                                {% endif %}
+                            </td>
+                            <td class="p-3 text-center">
+                                {% if not user.is_admin %}
+                                <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('WARNING: PERMANENT DELETION.\nConfirm target: {{ user.username }}?');">
+                                    <button type="submit" class="text-red-500/70 hover:text-red-500 hover:underline text-xs">
+                                        [DELETE]
+                                    </button>
+                                </form>
+                                {% else %}
+                                <span class="text-gray-600 text-[10px] cursor-not-allowed">LOCKED</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+/* Custom Scrollbar for User List */
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 2px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>
+{% endblock %}

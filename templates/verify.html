@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-8 rounded shadow-md mt-10">
+    <h2 class="text-2xl font-bold mb-6 text-center">🔐 Verify OTP</h2>
+    <p class="text-gray-600 mb-6 text-center text-sm">We've sent a 6-digit code to your email. Please enter it below.</p>
+    
+    <form method="POST" action="/verify">
+        <div class="mb-6">
+            <label class="block text-gray-700 font-bold mb-2">One-Time Password (OTP)</label>
+            <input type="text" name="otp" class="w-full p-3 border rounded text-center text-2xl tracking-widest" placeholder="123456" maxlength="6" required>
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 text-white p-3 rounded font-bold hover:bg-indigo-700">Verify Account</button>
+    </form>
+</div>
+{% endblock %}
