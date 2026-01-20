@@ -1,5 +1,6 @@
 import os
 import random
+import requests
 from functools import wraps
 from datetime import date, timedelta
 from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, abort, session
@@ -189,6 +190,105 @@ def profile():
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+@app.route('/update_leetcode_username', methods=['POST'])
+@login_required
+def update_leetcode_username():
+    new_username = request.form.get('leetcode_username')
+    if new_username:
+        current_user.leetcode_username = new_username.strip()
+        db.session.commit()
+        flash('LeetCode username updated!', 'success')
+    else:
+        # If empty allowed to clear
+        if new_username == "":
+             current_user.leetcode_username = None
+             db.session.commit()
+             flash('LeetCode username removed.', 'info')
+        else:
+             flash('Please enter a username.', 'warning')
+    return redirect(url_for('profile'))
+
+@app.route('/sync_leetcode', methods=['POST'])
+@login_required
+def sync_leetcode():
+    username = current_user.leetcode_username
+    if not username:
+        flash('Please set your LeetCode username first.', 'warning')
+        return redirect(url_for('profile'))
+
+    # GraphQL Query
+    query = """
+    query recentAcSubmissions($username: String!, $limit: Int!) {
+      recentAcSubmissionList(username: $username, limit: $limit) {
+        titleSlug
+      }
+    }
+    """
+    
+    variables = {
+        "username": username,
+        "limit": 100 
+    }
+
+    try:
+        resp = requests.post(
+            'https://leetcode.com/graphql',
+            json={'query': query, 'variables': variables},
+            timeout=10
+        )
+        data = resp.json()
+        
+        if 'errors' in data:
+             flash(f'LeetCode API Error: {data["errors"][0]["message"]}', 'error')
+             return redirect(url_for('profile'))
+
+        submissions = data.get('data', {}).get('recentAcSubmissionList', [])
+        solved_slugs = {sub['titleSlug'] for sub in submissions}
+
+        if not solved_slugs:
+            flash('No recent submissions found or user not found.', 'info')
+            return redirect(url_for('profile'))
+
+        # Check against Question DB
+        all_qs = Question.query.all()
+        marked_count = 0
+        
+        for q in all_qs:
+            if not q.problem_link: continue
+            
+            # Extract slug from problem_link
+            # Typical link: https://leetcode.com/problems/two-sum/
+            parts = q.problem_link.strip('/').split('/')
+            q_slug = parts[-1] 
+            
+            if q_slug in solved_slugs:
+                # Mark as solved
+                prog = UserProgress.query.filter_by(user_id=current_user.id, question_id=q.id).first()
+                if not prog:
+                    prog = UserProgress(user_id=current_user.id, question_id=q.id, is_solved=True)
+                    db.session.add(prog)
+                    marked_count += 1
+                elif not prog.is_solved:
+                    prog.is_solved = True
+                    marked_count += 1
+        
+        if marked_count > 0:
+            db.session.commit()
+            # Update streak if we have that function available
+            try:
+                update_streak(current_user)
+            except:
+                pass 
+            flash(f'Synced! Marked {marked_count} problems as solved.', 'success')
+        else:
+            flash('Synced! No new problems found in your recent history.', 'info')
+
+    except Exception as e:
+        print(f"Sync Error: {e}")
+        flash('Failed to connect to LeetCode.', 'error')
+
+    return redirect(url_for('profile'))
 
 # --- Helper Functions ---
 
