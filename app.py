@@ -6,6 +6,7 @@ from datetime import date, timedelta, datetime
 from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, abort, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_mail import Mail, Message
+from sqlalchemy.exc import IntegrityError
 from models import db, User, Question, UserProgress
 from dotenv import load_dotenv
 load_dotenv()
@@ -112,7 +113,18 @@ def register():
             new_user = User(username=username, email=email, is_verified=False, verification_otp=otp)
             new_user.set_password(password)
             db.session.add(new_user)
-            db.session.commit()
+            
+            try:
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                flash('Username or Email already exists.', 'error')
+                return render_template('register.html')
+            except Exception as e:
+                db.session.rollback()
+                print(f"Database Error: {e}")
+                flash('An internal error occurred. Please try again.', 'error')
+                return render_template('register.html')
             
             # Send Email
             try:
