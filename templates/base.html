@@ -126,22 +126,30 @@
 
     {% if current_user.is_authenticated %}
     <script>
-        // Auto-Sync LeetCode every 60 seconds when online
-        setInterval(() => {
+        // Define sync logic
+        function runAutoSync() {
             fetch('/api/sync/background', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers: { 'Content-Type': 'application/json' }
             })
             .then(response => response.json())
             .then(data => {
                 if(data.status === 'success' && data.marked_count > 0) {
                     console.log(`[AutoSync] Synced ${data.marked_count} new problems.`);
+                    // Optional: Refresh if you want live UI updates
+                    // location.reload();
+                } else if(data.status === 'skipped') {
+                    console.log('[AutoSync] Cooldown active.');
                 }
             })
             .catch(err => console.error('[AutoSync] Error:', err));
-        }, 60000); 
+        }
+
+        // 1. Run immediately on page load (Backend handles throttling)
+        document.addEventListener('DOMContentLoaded', runAutoSync);
+
+        // 2. Run every 60 seconds while on the page
+        setInterval(runAutoSync, 60000); 
     </script>
     {% endif %}
 </body>
