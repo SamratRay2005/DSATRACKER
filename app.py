@@ -414,27 +414,34 @@ def dashboard():
     solved_count = sum(1 for p in progress_records if p.is_solved)
     # user_xp = solved_count * 100  <-- Handled by context_processor now
     
-    # Organize by week for the accordion view
+    # Organize by week for the accordion view.
+    # Build this dynamically so questions from any week number are shown.
     weeks_data = {}
     weeks_stats = {} # To store progress per week
-    
-    for i in range(1, 15):
-        weeks_data[i] = []
-        weeks_stats[i] = {'total': 0, 'completed': 0, 'percent': 0}
-        
+
     for q in all_questions:
-        if q.week in weeks_data:
-            is_solved = solved_map.get(q.id, False)
-            weeks_data[q.week].append({
-                'q': q,
-                'solved': is_solved,
-                'bookmarked': bookmark_map.get(q.id, False)
-            })
-            
-            # Update stats
-            weeks_stats[q.week]['total'] += 1
-            if is_solved:
-                weeks_stats[q.week]['completed'] += 1
+        week_num = q.week if q.week is not None else 0
+
+        if week_num not in weeks_data:
+            weeks_data[week_num] = []
+            weeks_stats[week_num] = {'total': 0, 'completed': 0, 'percent': 0}
+
+        is_solved = solved_map.get(q.id, False)
+        weeks_data[week_num].append({
+            'q': q,
+            'solved': is_solved,
+            'bookmarked': bookmark_map.get(q.id, False)
+        })
+
+        # Update stats
+        weeks_stats[week_num]['total'] += 1
+        if is_solved:
+            weeks_stats[week_num]['completed'] += 1
+
+    # Keep weeks ordered in ascending order in the UI
+    ordered_weeks = sorted(weeks_data.keys())
+    weeks_data = {w: weeks_data[w] for w in ordered_weeks}
+    weeks_stats = {w: weeks_stats[w] for w in ordered_weeks}
                 
     # Calculate percentages
     for w in weeks_stats:

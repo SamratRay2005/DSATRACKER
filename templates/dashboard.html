@@ -187,7 +187,24 @@
 <script>
 function toggleWeek(id) {
     const el = document.getElementById(id);
-    el.classList.toggle('active');
+    const isOpen = el.classList.contains('active');
+
+    if (isOpen) {
+        el.style.maxHeight = '0px';
+        el.classList.remove('active');
+        return;
+    }
+
+    el.classList.add('active');
+    // Use actual rendered height so large weeks are never clipped.
+    el.style.maxHeight = `${el.scrollHeight}px`;
 }
+
+// Keep open accordion heights in sync on viewport changes.
+window.addEventListener('resize', () => {
+    document.querySelectorAll('.accordion-content.active').forEach((el) => {
+        el.style.maxHeight = `${el.scrollHeight}px`;
+    });
+});
 </script>
 {% endblock %}
